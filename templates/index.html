@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link type="text/css" rel="stylesheet" href="../static/css/bootstrap.css">
+    <script type="text/javascript" src="../static/js/bootstrap.js"></script>
+    <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        #inputBox input {
+            width: 114%;
+            height: 40px;
+            opacity: 0;
+            cursor: pointer;
+            position: absolute;
+            top: 0;
+            left: -14%;
+
+        }
+
+        .imgContainer img {
+            width: 100%;
+            height: 150px;
+            cursor: pointer;
+        }
+
+        .imgContainer p {
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 30px;
+            background: black;
+            text-align: center;
+            line-height: 30px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            display: none;
+        }
+
+        .imgContainer:hover p {
+            display: block;
+        }
+
+        figcaption {
+            text-align: center;
+            font-size: 24px;
+            margin: 20px;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        .player {
+            width: 720px;
+            height: 360px;
+            margin: 0 auto;
+            background-color: #000;
+            position: relative;
+        }
+
+        video {
+            height: 100%;
+            margin: 0 5% 0 5%;
+
+        }
+
+        .controls {
+            width: 720px;
+            height: 40px;
+            background-color: #1C192C;
+            position: absolute;
+            left: 0px;
+            bottom: 0px;
+            z-index: 100;
+            border-radius: 4px;
+        }
+
+        .controls .switch {
+            float: left;
+            width: 40px;
+            height: 20px;
+            color: #fff;
+            position: absolute;
+            top: 11px;
+            left: 11px;
+        }
+
+    </style>
+</head>
+
+<body>
+<figure>
+    <figcaption>视频播放</figcaption>
+    <div class="player">
+        <video id="myVideo" src="/static/video/my.mp4"></video>
+        <div class="controls">
+            <a href="javascript:void (0)" class="switch">播放</a>
+        </div>
+    </div>
+</figure>
+<div style="text-align: center;margin-top: 20px;margin-bottom: 20px;">
+    <div style="margin: auto;border: 1px solid #ccc;padding: 20px 0;width: 700px;">
+        <button id="auto-shot" class="btn btn-default">点击截取</button>
+        <button id="play-this-video" class="btn btn-success" style="margin: 0 90px;">（播放）Play</button>
+        <button id="pause-this-video" class="btn btn-danger">（暂停）Pause</button>
+    </div>
+</div>
+
+<br>
+<div style="text-align: center;">
+    <img src="../static/regist_image/mayun1.jpg" height="150px" width="200px"><strong
+        style="margin-left: 60px;">标准比对人脸</strong>
+</div>
+<br/><br/><br/><br/>
+<div id="ok-img-box"></div>
+</body>
+
+</html>
+<script type="text/javascript" src="../static/js/jquery.min.js"></script>
+<script>
+    //获取视频对象 H5写法
+    var myVideo = document.querySelector("#myVideo");
+
+    //播放或暂停
+    document.querySelector('.switch').addEventListener("click", function () {
+        //判断当前视频是否暂停
+        if (myVideo.paused) {
+            myVideo.play();//播放
+            $('.switch').html('暂停');
+            $.post("/video_reg", {tag: 1}, function (result) {
+                // {#alert(1);#}
+            });
+        } else {
+            myVideo.pause();//暂停
+            $('.switch').html('播放');
+            $.post("/video_reg", {tag: 0}, function (result) {
+                // {#alert(1);#}
+            });
+        }
+    });
+
+    $(function () {
+        var canAjax = true;
+        var filename = 1;
+
+        function uploadImg(imgPath, fname) {
+            var formData = new FormData();
+            formData.append('file', imgPath);
+            formData.append('fname', fname);
+            console.log(formData);
+            if (canAjax) {  // if canAjax == true --> canAjax = false
+                canAjax = false
+            } else {
+                return false
+            }
+            $.ajax({
+                url: '/compare',
+                type: 'POST',
+                data: formData,
+                processData: false,  // tell jQuery not to process the data
+                contentType: false,  // tell jQuery not to set contentType
+                success: function (data) {
+                    canAjax = true;  // canAjax --> false --> true
+                    // console.log(data);
+                    data = JSON.parse(data);
+                    if (!data.ok) {
+                        return false
+                    }
+                    ++filename;
+                    var $newdiv1 = $("<div class='result-item' style = 'float:left;margin:68px'>" +
+                        "<img class='result-img' src='" + data.itemUrl + "'><br/><span class='result-name'>" +
+                        data.itemName + "</span>" + "<br/><span class='oushi'>" +
+                        '相似度为：' + data.img_similarity + "</span></div>");
+                    $('#ok-img-box').append($newdiv1)
+                },
+                error: function () {
+                    canAjax = true
+                }
+            });
+        }
+
+        function shotPic() {
+            console.log('shot func');
+            // 创建canvas对象(画布)
+            var canvas = document.createElement('canvas');
+            canvas.width = 480;
+            canvas.height = 360;
+            var ctx = canvas.getContext('2d');  // 2d图形
+            var video = $('#myVideo').get(0);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // blob对象显示图片
+            canvas.toBlob(function (blob) {
+                url = URL.createObjectURL(blob); // url:imgPath
+                uploadImg(blob, (filename + '.jpg'));
+                //console.log(blob);
+            });
+        }
+
+        $('#video-play-btn').click(function () {
+            $('#myVideo').get(0).play();
+        });
+
+        $('#play-this-video').click(function () {
+            $('#myVideo').get(0).play()
+        });
+        $('#pause-this-video').click(function () {
+            $('#myVideo').get(0).pause()
+        });
+        $('#auto-shot').click(function () {
+            shotPic();
+            setTimeout(function () {shotPic()},1000);
+            setTimeout(function () {shotPic()},2000);
+            {#setTimeout(function () {shotPic()},3000);#}
+        })
+    })
+</script>
+

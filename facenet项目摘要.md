@@ -1,0 +1,9 @@
+项目从视频中获取人脸图像主要是通过HTML5中的canvas标签创建画布，并配合Flask中Jinjia2模板，基于MTCNN的Multi-task人脸检测框架，将人脸检测和人脸特征点检测同时进行，实现对canvas获取图形对象的人脸检测识别。
+
+HTML5 Canvas标签本身只是画布、容器，不具备绘画能力，用于图形的绘制是通过脚本(通常是JavaScript)，基于html5的getContext("2d")返回的CanvasRenderingContext2D对象来完成。创建完成的图形对象通过drawImage()方法在创建的画布上绘制相应的视频图像，采用toBlob()方法创在Blob对象，用以展示canvas上的视频图片。
+
+自拟定uploadImg(imgPath,imgName)上传回显图片函数，通过URL.createObjectURL() 静态方法会创建一个DOMString，其中包含一个表示参数中给出的对象的URL，这个 URL 的生命周期和创建它的窗口中的 document绑定，这个新的URL 对象表示指定的Blob对象。
+
+函数uploadImg函数，通过Ajax向后端发送图片对象，后端接收POST请求，并处理图片对象为正确格式。后端采用MTCNN多任务卷积神经网络的cascade框架，总体分为PNet、RNet和ONet三层网络结构，由原始图片和PNet生成预测的bounding boxes。输入原始图片和PNet生成的bounding box，通过RNet，生成校正后的bounding box。输入元素图片和RNet生成的bounding box，通过ONet，生成校正后的bounding box和人脸面部轮廓关键点，完成对请求对象图形中的人脸识别检测，并保存。
+
+将保存的人脸图像通过POST请求，请求部署在服务器上的facenet模型，模型依次识别传入人脸图片，并返回每张图片的128维人脸特征值。分别将视频人脸返回的特征值与标准人脸的特征值做差，得出每张人脸图片与标准人脸图片的欧氏距离。分别采用不同的标准人脸图片做预测，通过测试数据判断阈值，并预测出最大值与最小值，根据公式(max-x)/(max-min)得出人脸相似度，并将相似度值与截取人脸图片回显到web页面上。
